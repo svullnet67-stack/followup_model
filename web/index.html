@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+ <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+ <meta name="description" content="比较多次沟通记录，追踪信息变化、顾虑与约定，生成有原话依据的跟进报告。无需安装，离线本地分析。">
+ <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src data: blob:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+ <meta name="theme-color" content="#192d42"><title>多轮沟通对比与跟进助手 · 本地桌面版</title>
+ <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='12' fill='%23375ee5'/%3E%3Cpath d='M11 12h18v13H18l-7 5z' fill='white'/%3E%3C/svg%3E">
+ <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+ <aside class="sidebar">
+  <a class="brand" id="brandHome" href="#"><span class="logo">↗</span><span>跟进助手<small>FOLLOWUP WORKSPACE</small></span></a>
+  <a href="./model.html" style="display:block;padding:16px;color:#375ee5">进入训练模型 · 状态判断 →</a><div class="side-label">工作空间（规则复盘）</div>
+  <button class="nav active" id="workspaceBtn"><span>▤</span>沟通复盘<span class="nav-dot"></span></button>
+  <button class="nav" id="helpBtn"><span>?</span>使用说明</button>
+  <div class="side-line"></div>
+  <div class="side-label project-label">本机已保存项目 <button id="sideNew" aria-label="新建项目">＋</button></div>
+  <div id="savedList" class="saved-list"></div>
+  <div class="side-bottom"><span class="local-dot"></span> 离线本地分析<p>记录不会发送给模型服务。<br>缓存仅限当前路径与浏览器。</p><small>本地桌面窗口版 v1.1</small></div>
+ </aside>
+ <main>
+  <header class="topbar"><span class="breadcrumb">工作空间 <span>/</span> 沟通复盘</span><button class="help-mobile" id="mobileHelp">使用说明</button><span class="mode"><span class="local-dot"></span> 本地规则模式</span></header>
+  <div class="workspace">
+   <section class="intro"><div><p class="eyebrow">COMMUNICATION REVIEW</p><h1>多轮沟通对比与跟进助手</h1><p class="subtitle">看清每次沟通的变化，让下一次跟进更有针对性。</p></div><button class="button outline" id="demoBtn"><span>▷</span> 载入演示</button></section>
+   <div class="projectbar"><label for="student">学生代号</label><input id="student" maxlength="100" placeholder="例如：学生001" autocomplete="off"><span id="saveState" class="save-state">未保存</span><div class="project-actions"><button class="button plain" id="newBtn">＋ 新建</button><button class="button plain" id="importBtn">打开项目文件</button><button class="button outline" id="saveBtn">保存本机缓存</button><button class="button outline" id="projectExport">备份项目文件</button></div><input id="fileInput" type="file" accept=".json,application/json" hidden></div>
+   <select class="mobile-projects" id="mobileProjects" aria-label="打开本机已保存项目"><option value="">打开本机已保存项目…</option></select>
+   <section class="stats" aria-label="当前项目概况"><div><span class="stat-symbol blue">▤</span><div><small>沟通记录</small><strong id="recordCount">0 <em>次</em></strong></div></div><div><span class="stat-symbol amber">◷</span><div><small>最新沟通</small><strong id="latestDate" class="date-stat">—</strong></div></div><div><span class="stat-symbol green">✓</span><div><small>分析状态</small><strong id="analysisState" class="date-stat">等待分析</strong></div></div></section>
+   <section class="panels">
+    <div class="panel input-panel">
+     <div class="panel-heading"><h2><span class="step">01</span>沟通记录</h2><button id="addBtn" class="button mini outline">＋ 新增一次</button></div>
+     <div id="recordList" class="record-list" role="list" aria-label="历次沟通"></div>
+     <div class="editor-head"><h3 id="editorTitle">编辑沟通</h3><button id="deleteBtn" class="text-button danger">删除本次</button></div>
+     <label class="field-label" for="recordDate">沟通时间</label><input id="recordDate" type="datetime-local" step="60" min="1900-01-01T00:00" max="9999-12-31T23:59">
+     <div class="text-label"><label class="field-label" for="transcript">沟通内容</label><span id="charCount">0 / 30,000 字</span></div>
+     <textarea id="transcript" maxlength="30000" spellcheck="false" placeholder="家长：孩子现在高二，数学70分。&#10;顾问：目前有什么顾虑？&#10;家长：周末没有时间，担心补课效果不好。"></textarea>
+     <p class="input-tip">每行标注“家长：”“学生：”或“顾问：”。一个项目只记录一位学生。</p>
+     <div class="analyze-area"><button id="analyzeBtn" class="button primary">对比全部沟通 <span>→</span></button><span>Ctrl / ⌘ + Enter</span></div>
+    </div>
+    <div class="panel result-panel">
+     <div class="panel-heading"><h2><span class="step">02</span>复盘与跟进</h2><div class="result-actions"><button id="editBtn" class="text-button">编辑报告</button><button id="exportBtn" class="button mini outline">导出 TXT</button></div></div>
+     <div class="result-notice" id="resultNotice"><span>✦</span><span>分析结论附原话依据，核对后再用于跟进。</span></div>
+     <div class="tabs" id="tabs" role="tablist" aria-label="报告分类"><button role="tab" data-tab="all" aria-selected="true">全部概览</button><button role="tab" data-tab="changes" aria-selected="false">信息变化</button><button role="tab" data-tab="concerns" aria-selected="false">顾虑</button><button role="tab" data-tab="commitments" aria-selected="false">约定</button><button role="tab" data-tab="next_steps" aria-selected="false">跟进重点</button></div>
+     <div id="results" class="results" role="tabpanel" aria-live="polite"></div>
+     <div class="result-footer"><span id="reportFoot">请先添加沟通内容</span><button id="copyBtn" class="text-button">复制完整报告 ↗</button></div>
+    </div>
+   </section>
+   <footer class="page-footer"><span>所有分析结果均需人工复核。未提及 ≠ 已解决，已回应 ≠ 已接受。</span><span>本地规则分析 · 请定期备份项目文件</span></footer>
+  </div>
+ </main>
+ <div id="toast" role="status" class="toast" hidden></div>
+ <dialog id="helpDialog"><div class="dialog-title"><h2>开始一次有据可循的复盘</h2><button class="close-dialog" aria-label="关闭">×</button></div><ol class="help-steps"><li><strong>添加历次沟通</strong><p>填写学生代号，每次沟通填写日期与内容。角色标签可以提高识别准确性。</p></li><li><strong>对比全部记录</strong><p>系统按日期排序，比较最新沟通与历史信息，跟踪顾虑和明确行动陈述。</p></li><li><strong>核对原话</strong><p>点击“查看原话依据”展开证据，再点日期可以定位到相应记录。结果可以人工编辑。</p></li><li><strong>保存与分享报告</strong><p>“保存本机缓存”存入当前浏览器的本地存储。移动程序文件、切换浏览器或清理缓存后可能无法找到项目。“备份项目文件”生成可备份的 JSON 文件，也可导入桌面版的项目 JSON；导入后重新分析。TXT 报告可用于沟通准备。</p></li></ol><div class="help-note"><strong>当前版本的能力</strong><p>无需安装 Python，无需登录或联网。桌面启动器使用已安装的 Edge 或 Chrome 打开独立窗口，核心是本地 HTML 应用。采用规则分析，尚未训练专用模型。暂未连接模型 API，不提供跨设备自动同步。清除浏览器数据会删除本机项目，请下载备份。</p><p>“表述变化”不必然代表事实改变，复杂指代和多个同类约定仍需人工核对。请使用获授权、已脱敏的记录。</p></div><button class="button primary close-dialog">开始使用</button></dialog>
+ <dialog id="editDialog" class="edit-dialog"><div class="dialog-title"><h2>编辑完整报告</h2><button class="close-dialog" aria-label="关闭">×</button></div><p class="muted">修改影响复制和 TXT 导出，不改变原始分析卡片。重新分析将替换编辑结果。</p><textarea id="editedText" spellcheck="false" aria-label="完整报告文本"></textarea><div class="dialog-buttons"><button id="resetEdit" class="button outline">恢复生成内容</button><button id="applyEdit" class="button primary">保留修改</button></div></dialog>
+ <noscript>此应用需要浏览器启用 JavaScript 才能分析沟通记录。</noscript><script type="module" src="./app.mjs"></script>
+</body></html>
