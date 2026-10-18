@@ -16,8 +16,42 @@ engine = {}
 @asynccontextmanager
 async def lifespan(app):
     folder = ROOT / 'model'
-    if not (folder / 'model.safetensors').is_file():
-        raise RuntimeError('缺少 model/model.safetensors，请复制最新 best 中的权重后启动。')
+        weights = folder / 'model.safetensors'
+    if not weights.is_file():
+        from qcloud_cos import CosConfig, CosS3Client
+
+        required = [
+            'COS_REGION', 'COS_BUCKET',
+            'COS_SECRET_ID', 'COS_SECRET_KEY'
+        ]
+        missing = [name for name in required if not os.getenv(name)]
+        if missing:
+            raise RuntimeError('缺少环境变量：' + ', '.join(missing))
+
+        folder.mkdir(parents=True, exist_ok=True)
+        client = CosS3Client(CosConfig(
+            Region=os.environ['COS_REGION'],
+            SecretId=os.environ['COS_SECRET_ID'],
+            SecretKey=os.environ['COS_SECRET_KEY'],
+            Scheme='https'
+        ))
+        temporary = folder / 'model.safetensors.part'
+        print('正在从存储桶下载模型……', flush=True)
+        try:
+            client.download_file(
+                Bucket=os.environ['COS_BUCKET'],
+                Key=os.getenv('COS_MODEL_KEY', 'model.safetensors'),
+                DestFilePath=str(temporary),
+                MAXThread=3,
+                EnableCRC=True
+            )
+            temporary.replace(weights)
+        except Exception:
+            temporary.unlink(missing_ok=True)
+            raise RuntimeError(
+                '模型下载失败，请检查 COS 地域、文件路径、密钥与读取权限。'
+            ) from None
+        print('模型下载完成，开始加载。', flush=True)
     import torch
     from transformers import AutoTokenizer, AutoModelForSequenceClassification
     torch.set_num_threads(int(os.environ.get('TORCH_NUM_THREADS', '2')))
