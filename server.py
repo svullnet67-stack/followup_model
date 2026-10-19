@@ -16,41 +16,42 @@ engine = {}
 @asynccontextmanager
 async def lifespan(app):
     folder = ROOT / 'model'
-        weights = folder / 'model.safetensors'
+    weights = folder / 'model.safetensors'
     if not weights.is_file():
-        from qcloud_cos import CosConfig, CosS3Client
-
-        required = [
-            'COS_REGION', 'COS_BUCKET',
-            'COS_SECRET_ID', 'COS_SECRET_KEY'
-        ]
-        missing = [name for name in required if not os.getenv(name)]
-        if missing:
-            raise RuntimeError('缺少环境变量：' + ', '.join(missing))
-
+        import urllib.request
+        import urllib.error
+        from urllib.parse import urlsplit
+        url = os.getenv('MODEL_URL', '').strip()
+        if urlsplit(url).scheme != 'https':
+            raise RuntimeError('请设置 MODEL_URL 为模型文件的 HTTPS 直链。')
         folder.mkdir(parents=True, exist_ok=True)
-        client = CosS3Client(CosConfig(
-            Region=os.environ['COS_REGION'],
-            SecretId=os.environ['COS_SECRET_ID'],
-            SecretKey=os.environ['COS_SECRET_KEY'],
-            Scheme='https'
-        ))
         temporary = folder / 'model.safetensors.part'
         print('正在从存储桶下载模型……', flush=True)
         try:
-            client.download_file(
-                Bucket=os.environ['COS_BUCKET'],
-                Key=os.getenv('COS_MODEL_KEY', 'model.safetensors'),
-                DestFilePath=str(temporary),
-                MAXThread=3,
-                EnableCRC=True
-            )
+            with urllib.request.urlopen(url, timeout=120) as response:
+                expected = response.headers.get('Content-Length')
+                count = 0
+                with temporary.open('wb') as output:
+                    while True:
+                        block = response.read(1024 * 1024)
+                        if not block:
+                            break
+                        output.write(block)
+                        count += len(block)
+                if count == 0 or (expected is not None and count != int(expected)):
+                    raise RuntimeError('模型文件下载不完整。')
+            # 验证 safetensors 结构，避免把错误页面当成模型保存。
+            from safetensors import safe_open
+            with safe_open(str(temporary), framework='pt', device='cpu') as saved:
+                if not list(saved.keys()):
+                    raise RuntimeError('模型文件中没有权重。')
             temporary.replace(weights)
+        except urllib.error.HTTPError as exc:
+            temporary.unlink(missing_ok=True)
+            raise RuntimeError(f'下载模型失败，HTTP {exc.code}；请检查文件公有读权限和 MODEL_URL。') from None
         except Exception:
             temporary.unlink(missing_ok=True)
-            raise RuntimeError(
-                '模型下载失败，请检查 COS 地域、文件路径、密钥与读取权限。'
-            ) from None
+            raise RuntimeError('模型下载或格式验证失败，请检查 MODEL_URL、网络及文件完整性。') from None
         print('模型下载完成，开始加载。', flush=True)
     import torch
     from transformers import AutoTokenizer, AutoModelForSequenceClassification
@@ -102,4 +103,4 @@ app.mount('/', StaticFiles(directory=ROOT / 'web', html=True), name='web')
 
 if __name__ == '__main__':
     import uvicorn
-    uvicorn.run(app, host=os.environ.get('HOST', '127.0.0.1'), port=int(os.environ.get('PORT', '8080')), access_log=False)
+    uvicorn.run(app, host=os.environ.get('HOST', '0.0.0.0'), port=int(os.environ.get('PORT', '8080')), access_log=False)
